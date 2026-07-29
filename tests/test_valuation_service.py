@@ -50,4 +50,4 @@ def test_predict_invalid_bedrooms_rejected():
         "size_sqft": 1000,
     }
     resp = client.post("/predict", json=payload)
-    assert resp.status_code == 400
+    assert resp.status_code == 422  # pydantic validation error (bedrooms ge=0 constraint)
