@@ -1,0 +1,118 @@
+name: PropIQ CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE_NAME: propiq-valuation-service
+
+jobs:
+  test:
+    name: Unit & API tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate synthetic dataset
+        run: python ml/generate_data.py
+
+      - name: Train model (needed so tests/predict have artifacts to load)
+        run: python ml/train_model.py
+
+      - name: Run test suite
+        run: python -m pytest tests/ -v
+
+  model-quality-gate:
+    name: Model quality gate
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate synthetic dataset
+        run: python ml/generate_data.py
+
+      - name: Train model
+        run: python ml/train_model.py
+
+      - name: Check model does not regress past acceptable error
+        run: python ml/check_model_quality.py
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model
+          path: ml/model/
+
+  build-and-push:
+    name: Build & push Docker image
+    needs: model-quality-gate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies (needed to regenerate the dataset)
+        run: pip install -r requirements.txt
+
+      - name: Regenerate dataset CSV (used by tools.py at runtime, not part of the model artifact)
+        run: python ml/generate_data.py
+
+      - name: Download trained model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          path: ml/model/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:latest
+            ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # Placeholder deploy step - swap for your actual target
+      # (Cloud Run, ECS, a VM pull+restart, etc.)
+      - name: Deploy (placeholder)
+        run: |
+          echo "Image pushed: ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "Wire this step to your actual deploy target (Cloud Run / ECS / SSH+docker pull / etc.)"
