@@ -1,5 +1,8 @@
 # PropIQ — Agentic AI Property Valuation & Advisory Assistant
 
+
+https://propiq-valuation.fly.dev 
+
 An agentic AI assistant for the Dubai real estate market. Ask it a natural-language
 question about a property, and it plans which tools to call - a TensorFlow-trained
 price model, comparable listings, neighborhood stats, a mortgage calculator - and
@@ -94,3 +97,9 @@ doesn't change.
   in for a real listings database - swap for a real data source in production.
 - The agent's `estimate_mortgage` uses standard fixed-rate amortization; UAE mortgages
   can have different structures (e.g. Islamic financing) not modeled here.
+  <img width="1575" height="157" alt="image" src="https://github.com/user-attachments/assets/233bb5d2-eaf8-45d6-9b38-6b49e6e0095b" />
+  <img width="711" height="172" alt="image" src="https://github.com/user-attachments/assets/30a6c66e-bee2-46d6-b8c0-781f1705cc7b" />
+  <img width="1317" height="135" alt="image" src="https://github.com/user-attachments/assets/46f0ed37-1916-41d5-a49b-f0dfaf2c736c" />
+
+
+
